@@ -1,0 +1,281 @@
+import React, { useContext, useState } from "react";
+import { StyleSheet, Text, View, ScrollView, TouchableWithoutFeedback, Image, KeyboardAvoidingView, TextInput, TouchableOpacity, Alert, Keyboard, Dimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { AntDesign } from "@expo/vector-icons";
+import client from "../api/client";
+import { AuthContext } from "../context/AuthContext";
+import axios from 'axios';
+
+const LoginScreenCollector = ({ navigation, onPressPublic, onPressCollector }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState('');
+
+  const { loginCollector } = useContext(AuthContext);
+
+
+  const updateError = (error, stateUpdater) => {
+    stateUpdater(error);
+    setTimeout(() => {
+      stateUpdater('')
+    }, 2500);
+  }
+
+  const isValidEmail = (email) => {
+    const regx = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
+    return regx.test(email);
+  }
+
+
+  const handleLogin = async () => {
+    //Validate email
+    if (!isValidEmail(email)) {
+      return updateError('Invalid Email!', setError);
+    }
+
+    //Validate password
+    if (!password.trim() || password.length < 8) {
+      return updateError('Invalid Password!', setError);
+    }
+
+    try {
+      await client
+        .post('/sign-in-collector', {
+          email,
+          password
+        })
+        .then(res => {
+          //console.log(res.data);
+          if (res.data.status) {
+            console.log(res.data);
+            navigation.navigate('CollectorHomeScreen1');
+            loginCollector(res.data.tokenCollector, res.data.name, res.data.email);
+            setEmail("");
+            setPassword("");
+          }
+          else {
+            Alert.alert(res.data.message, 'Sign in again');
+          }
+        })
+
+    } catch (error) {
+      // Handle error
+      console.error('Error while login:', error.message, error.response);
+    }
+  };
+
+
+  return (
+    <SafeAreaView style={[styles.container, { width: Dimensions.get('window').width }]}>
+      <View style={styles.roleIndicator}>
+        <TouchableOpacity
+          onPress={onPressPublic}
+          activeOpacity={0.7}
+          style={[styles.buttonContainer, { backgroundColor: 'white' }, { borderTopLeftRadius: 10 }, { borderBottomLeftRadius: 10 }]}
+        >
+          <Text style={[styles.button, { color: 'teal' }]}>
+            PUBLIC
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onPressCollector}
+          activeOpacity={0.7}
+          style={[styles.buttonContainer, { backgroundColor: 'teal' }, { borderTopRightRadius: 10 }, { borderBottomRightRadius: 10 }]}
+        >
+          <Text style={[styles.button, { color: 'white' }]}>
+            COLLECTOR
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+      <View style={styles.keyboardAvoidingContainer}>
+
+        <Image
+          style={styles.image}
+          source={require("../assets/LoginScreen/head.png")}
+        />
+
+        <Text style={{ textAlign: 'center', color: 'grey' }}>Welcome to ECO BIN SMART</Text>
+
+        <View style={[{ flexDirection: 'row' }, { justifyContent: 'center' }]}>
+          <Text style={styles.heading}>Login as </Text>
+          <Text style={[styles.heading, { color: '#204279ff' }, { fontWeight: '800' }]}>COLLECTOR</Text>
+        </View>
+        {error ? <Text style={{ color: 'red', textAlign: 'center' }}>{error}</Text> : null}
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
+              <MaterialIcons name="email" size={30} color="teal" />
+              <TextInput
+                value={email}
+                onChangeText={(text) => setEmail(text)}
+                style={styles.input}
+                placeholder="Enter your Email"
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
+              <AntDesign name="lock" size={30} color="teal" />
+              <TextInput
+                value={password}
+                onChangeText={(text) => setPassword(text)}
+                secureTextEntry={true}
+                style={styles.input}
+                placeholder="Enter your Password"
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View style={styles.additionalInfoContainer}>
+            <Text style={styles.additionalInfoText}>Forgot Password</Text>
+          </View>
+
+          <TouchableOpacity activeOpacity={0.7} onPress={handleLogin} style={styles.loginButton}>
+            <Text style={styles.loginButtonText}>Login</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.signupText}>Don't have an account?</Text>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => { navigation.navigate("RegisterScreen"), setEmail(""), setPassword("") }} style={styles.signupLink}>
+            <Text style={styles.signupLinkText}>Sign Up</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  roleIndicator: {
+    flexDirection: "row",
+  },
+  buttonContainer: {
+    width: '50%',
+    height: 50,
+    borderColor: 'skyblue',
+    borderWidth: 1,
+    marginTop: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowOffset: {
+      width: 100,
+      height: 100
+    },
+
+    shadowColor: '#20476b',
+    shadowOpacity: 1,
+    shadowRadius: 8
+  },
+  button: {
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  keyboardAvoidingContainer: {
+    flex: 1,
+    width: "80%",
+    marginLeft: "auto",
+    marginRight: "auto",
+  },
+  image: {
+    marginTop: 30,
+    width: 300,
+    height: 150
+  },
+  heading: {
+    marginTop: 5,
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "teal",
+    marginBottom: 5,
+    textAlign: "center",
+  },
+  inputContainer: {
+    marginTop: 20,
+  },
+  inputWrapper: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "#D0D0D0",
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "teal",
+    borderRadius: 8,
+    padding: 5
+  },
+  input: {
+    color: "#20476b",
+    marginVertical: 10,
+    width: "80%",
+    fontSize: 16,
+  },
+  additionalInfoContainer: {
+    marginTop: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  additionalInfoText: {
+    color: "gray",
+  },
+  loginButton: {
+    height: 50,
+    width: "100%",
+    backgroundColor: "teal",
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: "#265b82ff",
+    marginLeft: "auto",
+    marginRight: "auto",
+    marginTop: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowOffset: {
+      width: 100,
+      height: 100
+    },
+
+    shadowColor: '#20476b',
+    shadowOpacity: 1,
+    shadowRadius: 8
+
+  },
+  loginButtonText: {
+    textAlign: "center",
+    color: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  signupText: {
+    textAlign: 'center',
+    color: 'grey',
+    marginTop: 10,
+    fontSize: 16
+  },
+  signupLink: {
+    marginTop: 5,
+  },
+  signupLinkText: {
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: 16,
+    color: "teal",
+  }
+
+});
+
+export default LoginScreenCollector;
+
