@@ -5,6 +5,9 @@ const feedback = new mongoose.Schema(
     name: { type: String, required: true },
     title: { type: String, required: true },
     feedback: { type: String, required: true },
+    photoUrl: { type: String, required: false },
+    source: { type: String, required: false },
+    createdAt: { type: Date, default: Date.now },
   },
   { collection: "feedback" }
 );

@@ -50,6 +50,7 @@ body {
   height: 100%;
   background-image: linear-gradient(#62c5d0, #5ecfa5, #1271a0);
   overflow-y: auto;
+  box-sizing: border-box;
   transition: all 0.5s;
   -webkit-transition: all 0.5s;
 }

@@ -72,6 +72,16 @@ mongoose.connection.on("error", (err) => {
   console.error("MongoDB connection error:", err);
 });
 
+// Serve uploaded files
+const uploadsPath = path.join(__dirname, "uploads");
+try {
+  const fs = require('fs');
+  if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
+} catch (e) {
+  console.warn('Could not create uploads dir:', e && e.message);
+}
+app.use('/uploads', express.static(uploadsPath));
+
 app.use(express.static(buildPath));
 
 app.get("/*", function (req, res) {

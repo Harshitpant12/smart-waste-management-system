@@ -9,12 +9,14 @@ import {
   TouchableWithoutFeedback,
   TouchableOpacity,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AntDesign } from 'react-native-vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from 'expo-image-picker';
 
 
 import client from "../api/client";
@@ -25,6 +27,9 @@ const ReportScreen = ({ navigation }) => {
   const [title, changeTitle] = useState("");
   const [feedback, changeFeedback] = useState("");
   const [error, setError] = useState("");
+
+  // image state for attached photo
+  const [image, setImage] = useState(null);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -69,7 +74,28 @@ const ReportScreen = ({ navigation }) => {
     return regex.test(number);
   };
 
+  // pick image from device (expo-image-picker)
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Permission to access media library is required to attach photos.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
+      if (!result.cancelled) {
+        setImage(result);
+      }
+    } catch (e) {
+      console.warn('Image pick failed', e && e.message ? e.message : e);
+      Alert.alert('Error', 'Could not pick image');
+    }
+  };
 
+  const removeImage = () => setImage(null);
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -85,33 +111,73 @@ const ReportScreen = ({ navigation }) => {
     }
 
     try {
-      await client
-        .post('/report-user', {
-          name,
-          number,
-          title,
-          feedback
-        })
-        .then(res => {
-          console.log(res.data);
+      // If an image is attached, send multipart/form-data
+      if (image && image.uri) {
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('number', number);
+        formData.append('title', title);
+        formData.append('feedback', feedback);
+        // mark source as mobile
+        formData.append('source', 'mobile');
+
+        const uri = image.uri;
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image';
+
+        formData.append('photo', { uri, name: filename, type });
+
+        await client.post('/report-user', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }).then(res => {
           if (res.data.status) {
             setIsLoading(false);
+            setImage(null);
             Alert.alert("Done", res.data.message, [
               {
                 text: 'Ok',
                 onPress: () => { navigation.navigate('PublicHomeScreen'); }
               }
             ]);
-          }
-          else {
+          } else {
             setIsLoading(false);
-            Alert.alert(res.data.message);
+            Alert.alert(res.data.message || 'Failed to submit');
           }
-        })
+        });
+
+      } else {
+        // No image; send JSON payload
+        await client
+          .post('/report-user', {
+            name,
+            number,
+            title,
+            feedback,
+          })
+          .then(res => {
+            console.log(res.data);
+            if (res.data.status) {
+              setIsLoading(false);
+              Alert.alert("Done", res.data.message, [
+                {
+                  text: 'Ok',
+                  onPress: () => { navigation.navigate('PublicHomeScreen'); }
+                }
+              ]);
+            }
+            else {
+              setIsLoading(false);
+              Alert.alert(res.data.message);
+            }
+          })
+      }
+
     } catch (error) {
       //Handle error
       setIsLoading(false);
-      console.error('Error reporting', error.message);
+      console.error('Error reporting', error && error.message ? error.message : error);
+      Alert.alert('Error', 'Failed to submit report');
     }
   };
 
@@ -182,6 +248,21 @@ const ReportScreen = ({ navigation }) => {
                   selectionColor={"teal"}
                   textAlignVertical="top"
                 />
+              </View>
+
+              {/* Photo attachment UI */}
+              <View style={{ alignItems: 'center', marginTop: 8 }}>
+                <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.8}>
+                  <Text style={styles.attachBtnText}>{image ? 'Change Photo' : 'Attach Photo'}</Text>
+                </TouchableOpacity>
+                {image ? (
+                  <View style={{ alignItems: 'center', marginTop: 8 }}>
+                    <Image source={{ uri: image.uri }} style={{ width: 260, height: 160, borderRadius: 8 }} />
+                    <TouchableOpacity onPress={removeImage} style={styles.removeBtn} activeOpacity={0.8}>
+                      <Text style={styles.removeBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
               </View>
             </View>
 
@@ -268,4 +349,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     lineHeight: 40,
   },
+  attachBtn: {
+    height: 40,
+    width: 160,
+    backgroundColor: "#2b8f87",
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  attachBtnText: { color: '#fff', fontWeight: 'bold' },
+  removeBtn: { marginTop: 8, backgroundColor: '#ff4d4f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  removeBtnText: { color: '#fff' },
 });

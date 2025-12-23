@@ -24,7 +24,8 @@ const specificLocation = {
 
 const MapView = () => {
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: "AIzaSyDfO-cbObfcLzAwzjpI9qZG-w_aDHmJ5Dk",
+    googleMapsApiKey: "6DPD2Yq99QSik5ypdCMe",
+    // "AIzaSyDfO-cbObfcLzAwzjpI9qZG-w_aDHmJ5Dk"
     libraries,
   });
 
